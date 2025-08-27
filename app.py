@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, request, jsonify, render_template_string
 import hashlib
 import requests
 from datetime import datetime
@@ -6,8 +6,8 @@ from datetime import datetime
 app = Flask(__name__)
 
 # === CONFIGURAÇÕES ===
-TOKEN_ORIGINAL = "mRvd11QSxXs5LUL$CfW1"
-USER = "02297349289"
+TOKEN_ORIGINAL = "mRvd11QSxXs5LUL$CfW1"   # Troque pelo Token fornecido pelo suporte
+USER = "02297349289"                       # Login de usuário
 API_URL = "https://stou.ifractal.com.br/i9saude/rest/"
 
 # === FUNÇÕES AUXILIARES ===
@@ -23,58 +23,75 @@ def get_headers():
         "Token": gerar_token_sha256(data_hoje)
     }
 
-# === ROTA COM TABELA ===
-@app.route("/rotatividade_2025_tabela", methods=["GET"])
-def rotatividade_2025_tabela():
-    body = {
-        "pag": "funcionario_rotatividade",
-        "cmd": "get",
-        "ano": 2025
-    }
+# === TEMPLATE HTML BÁSICO ===
+HTML_TABELA = """
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Rotatividade</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #1e1e1e; color: #ddd; }
+        table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+        th, td { border: 1px solid #444; padding: 8px; text-align: center; }
+        th { background-color: #333; color: #fff; }
+        tr:nth-child(even) { background-color: #2a2a2a; }
+        .highlight { background: #fdfd96; color: #000; }
+    </style>
+</head>
+<body>
+    <h2>📊 Relatório de Rotatividade</h2>
+    <table>
+        <thead>
+            <tr>
+                {% for col in dados[0].keys() %}
+                    <th>{{ col }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in dados %}
+                <tr>
+                    {% for col in row.values() %}
+                        <td>{{ col }}</td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
+"""
+
+# === ROTAS ===
+@app.route("/")
+def home():
+    return "✅ API online! Rotas disponíveis: /rotatividade"
+
+@app.route("/rotatividade", methods=["GET"])
+def funcionario_rotatividade():
+    body = {"pag": "funcionario_rotatividade", "cmd": "get"}
+
+    # Adiciona filtros da URL
+    for key in request.args:
+        val = request.args.get(key)
+        if val.lower() == "true":
+            val = True
+        elif val.lower() == "false":
+            val = False
+        elif val.isdigit():
+            val = int(val)
+        body[key] = val
 
     try:
         response = requests.post(API_URL, json=body, headers=get_headers())
         data = response.json()
 
-        # Ajusta caso venha dict
-        if isinstance(data, dict):
-            data = data.get("data", [])
-
-        # Cria tabela
-        meses = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto",
-                 "Setembro","Outubro","Novembro","Dezembro","2025"]
-        
-        tabela = {
-            "Indicador": [
-                "Admissões",
-                "Demissões",
-                "ROTATIVIDADE",
-                "Total funcionários início do mês",
-                "Total funcionários fim do mês",
-                "Variação",
-                "Taxa de variação",
-                "TURNOVER",
-                "TURNOVER acumulado no ano",
-                "Taxa de rotatividade admissional",
-                "Taxa de rotatividade demissional"
-            ]
-        }
-
-        # Para cada indicador, adiciona valores mês a mês
-        for indicador in tabela["Indicador"]:
-            # Aqui é necessário mapear os dados do JSON para os meses
-            # Exemplo simples: pegar data[indicador][mes], ajusta conforme seu JSON real
-            valores = []
-            for mes in range(1,13):
-                valor = next((item["valor"] for item in data if item["indicador"] == indicador and item["mes"] == mes), "-")
-                valores.append(valor)
-            # Soma total anual ou valor final
-            total = sum([v for v in valores if isinstance(v,int)]) if any(isinstance(v,int) for v in valores) else "-"
-            valores.append(total)
-            tabela[indicador] = valores
-
-        return jsonify(tabela)
-
+        # se a API retornar lista de registros
+        if isinstance(data, list) and len(data) > 0:
+            return render_template_string(HTML_TABELA, dados=data)
+        else:
+            return jsonify(data)
     except Exception as e:
         return jsonify({"erro": str(e)}), 500
 
