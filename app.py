@@ -15,17 +15,18 @@ UNIDADES = {
     2: "Domed",
     6: "HIOP",
     1: "I9",
-    11: "ITIBA"
+    11: "ITIBA",
     8: "UTI IOP",
     7: "CARAJÁS",
     12: "MATERCLIN",
-    10: "NEFROVITA"
-    13: "DIAGNOSE"
+    10: "NEFROVITA",
+    13: "DIAGNOSE",
     15: "OMNI",
     4: "VHC DF",
     3: "VHC GO",
     5: "VHC TO"
 }
+
 
 # Função para gerar token SHA256
 def gerar_token_sha256(data_formatada):
