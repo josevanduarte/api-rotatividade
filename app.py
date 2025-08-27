@@ -10,14 +10,6 @@ TOKEN_ORIGINAL = "mRvd11QSxXs5LUL$CfW1"
 USER = "02297349289"
 API_URL = "https://stou.ifractal.com.br/i9saude/rest/"
 
-# Dicionário de unidades (código : nome)
-UNIDADES = {
-    71: "Hospital Central",
-    72: "Clínica Zona Norte",
-    73: "Clínica Zona Sul",
-    80: "Unidade Maternidade"
-}
-
 # Função para gerar token SHA256
 def gerar_token_sha256(data_formatada):
     token_concat = TOKEN_ORIGINAL + data_formatada
@@ -34,6 +26,14 @@ def get_headers():
     }
 
 # ==============================
+# BUSCA TODAS AS UNIDADES NA API
+# ==============================
+def get_unidades():
+    body = {"pag": "empresa", "cmd": "get"}
+    response = requests.post(API_URL, json=body, headers=get_headers())
+    return response.json()   # Deve trazer lista de empresas/unidades
+
+# ==============================
 # ROTA JSON (TODAS UNIDADES)
 # ==============================
 @app.route("/rotatividade_json", methods=["GET"])
@@ -41,8 +41,16 @@ def funcionario_rotatividade_json():
     ano = request.args.get("ano", datetime.now().year)
     result = []
 
-    for codigo, nome in UNIDADES.items():
-        body = {"pag": "funcionario_rotatividade", "cmd": "get", "ano": ano, "cod_empresa": codigo}
+    try:
+        unidades = get_unidades()
+    except Exception as e:
+        return jsonify({"erro": f"Falha ao buscar unidades: {str(e)}"}), 500
+
+    for unidade in unidades:
+        cod_empresa = unidade.get("cod_empresa")
+        nome_empresa = unidade.get("nome")
+
+        body = {"pag": "funcionario_rotatividade", "cmd": "get", "ano": ano, "cod_empresa": cod_empresa}
 
         try:
             response = requests.post(API_URL, json=body, headers=get_headers())
@@ -66,7 +74,7 @@ def funcionario_rotatividade_json():
                 taxa_dms = data["turnover_mes"][i+1][2]
 
                 result.append({
-                    "Unidade": nome,   # <<< agora vem o nome
+                    "Unidade": nome_empresa,   # <<< Nome da unidade automático
                     "Ano": ano,
                     "Mes": mes,
                     "Admissoes": adm,
@@ -83,7 +91,7 @@ def funcionario_rotatividade_json():
                 })
 
         except Exception as e:
-            result.append({"Unidade": nome, "erro": str(e)})
+            result.append({"Unidade": nome_empresa, "erro": str(e)})
 
     return jsonify(result)
 
