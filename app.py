@@ -10,8 +10,13 @@ TOKEN_ORIGINAL = "mRvd11QSxXs5LUL$CfW1"
 USER = "02297349289"
 API_URL = "https://stou.ifractal.com.br/i9saude/rest/"
 
-# Lista de unidades (substitua pelos códigos reais)
-UNIDADES = [71, 72, 73, 80]  # exemplo
+# Dicionário de unidades (código : nome)
+UNIDADES = {
+    71: "Hospital Central",
+    72: "Clínica Zona Norte",
+    73: "Clínica Zona Sul",
+    80: "Unidade Maternidade"
+}
 
 # Função para gerar token SHA256
 def gerar_token_sha256(data_formatada):
@@ -34,11 +39,10 @@ def get_headers():
 @app.route("/rotatividade_json", methods=["GET"])
 def funcionario_rotatividade_json():
     ano = request.args.get("ano", datetime.now().year)
-
     result = []
 
-    for unidade in UNIDADES:
-        body = {"pag": "funcionario_rotatividade", "cmd": "get", "ano": ano, "cod_empresa": unidade}
+    for codigo, nome in UNIDADES.items():
+        body = {"pag": "funcionario_rotatividade", "cmd": "get", "ano": ano, "cod_empresa": codigo}
 
         try:
             response = requests.post(API_URL, json=body, headers=get_headers())
@@ -62,7 +66,7 @@ def funcionario_rotatividade_json():
                 taxa_dms = data["turnover_mes"][i+1][2]
 
                 result.append({
-                    "Unidade": unidade,
+                    "Unidade": nome,   # <<< agora vem o nome
                     "Ano": ano,
                     "Mes": mes,
                     "Admissoes": adm,
@@ -79,7 +83,7 @@ def funcionario_rotatividade_json():
                 })
 
         except Exception as e:
-            result.append({"Unidade": unidade, "erro": str(e)})
+            result.append({"Unidade": nome, "erro": str(e)})
 
     return jsonify(result)
 
