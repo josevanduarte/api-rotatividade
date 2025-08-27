@@ -34,7 +34,18 @@ def get_unidades():
     return response.json()   # Deve trazer lista de empresas/unidades
 
 # ==============================
-# ROTA JSON (TODAS UNIDADES)
+# ROTA TESTE: MOSTRAR UNIDADES
+# ==============================
+@app.route("/unidades", methods=["GET"])
+def listar_unidades():
+    try:
+        unidades = get_unidades()
+        return jsonify(unidades)
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
+
+# ==============================
+# ROTA JSON (ROTATIVIDADE TODAS)
 # ==============================
 @app.route("/rotatividade_json", methods=["GET"])
 def funcionario_rotatividade_json():
@@ -74,7 +85,7 @@ def funcionario_rotatividade_json():
                 taxa_dms = data["turnover_mes"][i+1][2]
 
                 result.append({
-                    "Unidade": nome_empresa,   # <<< Nome da unidade automático
+                    "Unidade": nome_empresa,
                     "Ano": ano,
                     "Mes": mes,
                     "Admissoes": adm,
