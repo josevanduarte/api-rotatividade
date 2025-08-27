@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, jsonify
 import hashlib
 import requests
 from datetime import datetime
@@ -28,42 +28,32 @@ def get_headers():
     }
 
 
-# === ROTAS ===
-@app.route("/")
-def home():
-    return "✅ API online! Rotas disponíveis: /rotatividade"
-
-
-@app.route("/rotatividade", methods=["GET"])
-def funcionario_rotatividade():
+# === ROTA FIXA PARA 2025 ===
+@app.route("/rotatividade_2025", methods=["GET"])
+def funcionario_rotatividade_2025():
     """
-    Exemplo de chamada:
-    /rotatividade?ano=2025&cod_empresa=10&dtde=01/01/2025&dtate=31/12/2025
+    Retorna sempre os dados de 2025 já no formato de tabela (array JSON).
+    Exemplo: https://sua-api.onrender.com/rotatividade_2025
     """
-    # Corpo base da requisição
     body = {
         "pag": "funcionario_rotatividade",
-        "cmd": "get"
+        "cmd": "get",
+        "ano": 2025
     }
-
-    # Adiciona filtros passados via URL
-    for key in request.args:
-        val = request.args.get(key)
-        if val.lower() == "true":
-            val = True
-        elif val.lower() == "false":
-            val = False
-        elif val.isdigit():
-            val = int(val)
-        body[key] = val
-
-    print("=== BODY ENVIADO PARA API ===")
-    print(body)
-    print("=============================")
 
     try:
         response = requests.post(API_URL, json=body, headers=get_headers())
-        return jsonify(response.json())
+        data = response.json()
+
+        # Se vier como dict, ajusta para lista
+        if isinstance(data, dict):
+            if "data" in data:
+                data = data["data"]
+            else:
+                data = [data]
+
+        return jsonify(data)
+
     except Exception as e:
         return jsonify({"erro": str(e)}), 500
 
